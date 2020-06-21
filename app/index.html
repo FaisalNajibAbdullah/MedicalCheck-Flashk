@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Medical Check</title>
+</head>
+
+<body>
+    <!--container-->
+    <section class="container">
+
+        <!--questionBox-->
+        <div class="questionBox" id="app">
+
+            <!-- transition -->
+            <transition :duration="{ enter: 500, leave: 300 }" enter-active-class="animated zoomIn"
+                leave-active-class="animated zoomOut" mode="out-in">
+
+                <!--questionContainer-->
+                <div class="questionContainer" v-if="questionIndex<listQuestion.length && questionIndex>=0"
+                    v-bind:key="questionIndex">
+
+                    <header>
+                        <h1 class="title is-6">Apakah Anda mengalami keluhan
+                            {{listQuestion[questionIndex].NameKeluhan.toLowerCase()}}?</h1>
+                        <!--progress-->
+                        <div class="progressContainer">
+                            <progress class="progress is-info is-small"
+                                :value=" Math.ceil((questionIndex/listQuestion.length)*100)"
+                                max="100">{{Math.ceil((questionIndex/listQuestion.length)*100)}}%</progress>
+                            <p>{{ Math.ceil((questionIndex/listQuestion.length)*100)}}% selesai</p>
+                        </div>
+                        <!--/progress-->
+                    </header>
+
+                    <!-- questionTitle 
+                    <div class="image-cropper-rect">
+                        <img :src='listQuestion[questionIndex].IndicationImage' alt="avatar" class="profile-pic">
+                    </div>-->
+
+                    <!-- quizOptions -->
+                    <div class="optionContainer">
+                        <div class="option" @click="select(1)" :class="{ 'is-selected': userResponses[questionIndex] != null && listAnswer.Atribut[questionIndex]
+                            == 1 }">
+                            Iya
+                        </div>
+                        <div class="option" @click="select(0)" :class="{ 'is-selected': userResponses[questionIndex] != null && listAnswer.Atribut[questionIndex]
+                            == 0}">
+                            Tidak
+                        </div>
+                        <div style="clear:both !important;">
+                        </div>
+                    </div>
+
+                    <!--quizFooter: navigation and progress-->
+                    <footer class="questionFooter">
+
+                        <!--pagination-->
+                        <nav class="pagination" role="navigation" aria-label="pagination">
+
+                            <!-- back button -->
+                            <a class="button" v-on:click="prev();" :disabled="questionIndex < 1">
+                                Kembali
+                            </a>
+
+                            <!-- next button -->
+                            <a class="button" :class="(userResponses[questionIndex]==null)?'':'is-active'"
+                                v-on:click="next();" :disabled="questionIndex>=listQuestion.length">
+                                {{ (userResponses[questionIndex]==null)?'Skip':'Selanjutnya' }}
+                            </a>
+
+                        </nav>
+                        <!--/pagination-->
+
+                    </footer>
+                    <!--/quizFooter-->
+
+                </div>
+                <!--/questionContainer-->
+
+                <!--quizCompletedResult-->
+                <div v-if="questionIndex >= listQuestion.length" v-bind:key="questionIndex"
+                    class="quizCompleted has-text-centered">
+
+                    <!-- quizCompletedIcon: Achievement Icon 
+                    <div class="image-cropper-round">
+                        <img :src='disease.DiseaseImage' :alt="disease.DiseaseName" class="profile-pic">
+                    </div>-->
+
+                    <!--resultTitleBlock-->
+                    <h2 class="title">
+                        {{disease.NameClass}}
+                    </h2>
+                    <div class="subtitle" style="text-align: justify !important;">
+                        <b style="text-align: justify !important;">Keterangan Penyakit:</b>
+                        <p style="text-align: justify !important;">{{disease.PenyebabClass}}</p>
+                        <br>
+                        <!--<b style="text-align: justify !important;">Solusi:</b>
+                        <p style="text-align: justify !important;">{{disease.DiseaseSolution}}</p>-->
+                    </div>
+                    <br>
+                    <a class="button" @click="restart()">Kembali <i class="fa fa-refresh"></i></a>
+                    <!--/resultTitleBlock-->
+
+                </div>
+                <!--/quizCompetedResult-->
+
+                <!--quizStart-->
+                <div v-if="questionIndex<0" v-bind:key="questionIndex" class="quizCompleted has-text-centered">
+
+                    <!-- quizStartIcon: Achievement Icon -->
+                    <div class="image-cropper-round">
+                        <img src="https://doktersehat.com/wp-content/uploads/2018/08/obat-batuk-berdahak-doktersehat.jpg"
+                            alt="Medical Check Penyakit Pernafasan" class="profile-pic">
+                    </div>
+
+                    <!--resultTitleBlock-->
+                    <h2 class="title">
+                        Medical Check Penyakit Pernafasan
+                    </h2>
+                    <p class="subtitle">
+                        Klik tombol Mulai untuk memulai pengecekan Penyakit Pernafasan dari keluhan Anda.
+                    </p>
+                    <br>
+                    <a class="button" @click="start()"> Mulai <i class="fa fa-refresh"></i></a>
+                    <!--/resultTitleBlock-->
+
+                </div>
+                <!--/quizStart-->
+
+            </transition>
+
+        </div>
+        <!--/questionBox-->
+
+    </section>
+    <!--/container-->
+    <script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script>
+        var app = new Vue({
+            el: "#app",
+            data: {
+                listQuestion: [],
+                questionIndex: -1,
+                userResponses: [],
+                isActive: false,
+                listAnswer: {
+                    "Atribut": []
+                },
+                disease: [],
+                host: "http://127.0.0.1:5000/"
+            },
+
+            methods: {
+                start: function () {
+                    this.questionIndex = 0;
+                },
+                restart: function () {
+                    this.questionIndex = -1;
+                    this.userResponses = Array(this.listQuestion.length).fill(null);
+                    this.listAnswer = {
+                        "Atribut": Array(this.listQuestion.length).fill(0)
+                    };
+                },
+                select: function (index) {
+                    Vue.set(this.listAnswer.Atribut, this.questionIndex, index);
+                    Vue.set(this.userResponses, this.questionIndex, index);
+                    // console.log(this.listAnswer)
+                    // console.log(this.userResponses)
+                },
+                next: function () {
+                    if (this.questionIndex < this.listQuestion.length) this.questionIndex++;
+                    if (this.questionIndex >=
+                        this.listQuestion.length) this.predict();
+                },
+                prev: function () {
+                    if (this.listQuestion.length > 0) this.questionIndex--;
+                },
+                predict: async function () {
+                    var answers = {};
+                    for (var i = 0; i < this.listAnswer.Atribut.length; i++) {
+                        answers[i.toString()] = this.listAnswer.Atribut[i];
+                    }
+                    this.listAnswer.Atribut = answers;
+                    try {
+                        const response = await
+                        axios.post(this.host+"predict", this.listAnswer);
+                        this.disease = response.data[0]; //
+                        console.log(response.data)
+                    } catch (e) {
+                        console.log(e)
+                    }
+                }
+            },
+            async mounted() {
+                try {
+                    const
+                        response = await axios.get(this.host+"questions");
+                    this.listQuestion = response.data;
+                    this.userResponses = Array(this.listQuestion.length).fill(null);
+                    this.listAnswer = {
+                        "Atribut": Array(this.listQuestion.length).fill(0)
+                    }; // console.log(this.listQuestion) } catch (e) {
+                    console.log(e)
+                } catch (e) {
+                    console.log(e)
+                }
+            }
+        });
+    </script>
+    <style>
+        @import url("https://fonts.googleapis.com/css?family=Montserrat:400,400i,700");
+        @import url("https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700");
+
+        body {
+            font-family: "Open Sans", sans-serif;
+            font-size: 14px;
+            height: 100vh;
+            background: #CFD8DC;
+            /* mocking native UI */
+            cursor: default !important;
+            /* remove text selection cursor */
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+            /* remove text selection */
+            user-drag: none;
+            /* disbale element dragging */
+            display: -webkit-box;
+            display: flex;
+            -webkit-box-align: center;
+            align-items: center;
+            -webkit-box-pack: center;
+            justify-content: center;
+        }
+
+        .button {
+            -webkit-transition: 0.3s;
+            transition: 0.3s;
+        }
+
+        .title,
+        .subtitle {
+            font-family: Montserrat, sans-serif;
+            font-weight: normal;
+        }
+
+        .animated {
+            -webkit-transition-duration: 0.15s;
+            transition-duration: 0.15s;
+        }
+
+        .container {
+            margin: 0 0.5rem;
+        }
+
+        .questionBox {
+            max-width: 50rem;
+            width: 50rem;
+            min-height: 50rem;
+            background: #FFE5B4;
+            position: relative;
+            display: -webkit-box;
+            display: flex;
+            border-radius: 0.5rem;
+            overflow: hidden;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.19), 0 6px 6px rgba(0, 0, 0, 0.23);
+        }
+
+        header {
+            margin-bottom: 1rem;
+        }
+
+        .questionBox header {
+            background: rgba(0, 0, 0, 0.025);
+            padding: 1rem 1.5rem;
+            text-align: center;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+        }
+
+        .questionBox header h1 {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 0.7rem !important;
+        }
+
+        .questionBox header .progressContainer {
+            width: 60%;
+            margin: 0 auto;
+        }
+
+        .questionBox header .progressContainer>progress {
+            margin: 0;
+            border-radius: 5rem;
+            overflow: hidden;
+            border: none;
+            color: #654321;
+        }
+
+        .questionBox header .progressContainer>progress::-moz-progress-bar {
+            background: #654321;
+        }
+
+        .questionBox header .progressContainer>progress::-webkit-progress-value {
+            background: #654321;
+        }
+
+        .questionBox header .progressContainer>p {
+            margin: 0;
+            margin-top: 0.5rem;
+        }
+
+        .questionBox .titleContainer {
+            text-align: center;
+            margin: 0 auto;
+            padding: 1.5rem;
+        }
+
+        .questionBox .quizForm {
+            display: block;
+            white-space: normal;
+            height: 100%;
+            width: 100%;
+        }
+
+        .questionBox .quizForm .quizFormContainer {
+            height: 100%;
+            margin: 15px 18px;
+        }
+
+        .questionBox .quizForm .quizFormContainer .field-label {
+            text-align: left;
+            margin-bottom: 0.5rem;
+        }
+
+        .questionBox .quizCompleted {
+            width: 100%;
+            padding: 1rem;
+            text-align: center;
+        }
+
+        .questionBox .quizCompleted>.icon {
+            color: #FF5252;
+            font-size: 5rem;
+        }
+
+        .questionBox .quizCompleted>.icon .is-active {
+            color: #00E676;
+        }
+
+        .questionBox .questionContainer {
+            white-space: normal;
+            height: 100%;
+            width: 100%;
+        }
+
+        .questionBox .questionContainer .optionContainer {
+            margin-top: 12px;
+            -webkit-box-flex: 1;
+            flex-grow: 1;
+        }
+
+        .questionBox .questionContainer .optionContainer .option {
+            border-radius: 290486px;
+            padding: 9px 18px;
+            margin: 0 18px;
+            margin-bottom: 12px;
+            -webkit-transition: 0.3s;
+            transition: 0.3s;
+            cursor: pointer;
+            background-color: rgba(0, 0, 0, 0.05);
+            color: rgba(0, 0, 0, 0.85);
+            border: transparent 1px solid;
+        }
+
+        .option {
+            float: left;
+            width: 36%;
+            margin-left: 20px !important;
+            margin-right: 0px !important;
+        }
+
+        .questionBox .questionContainer .optionContainer .option.is-selected {
+            border-color: rgba(0, 0, 0, 0.25);
+            background-color: white;
+        }
+
+        .questionBox .questionContainer .optionContainer .option:hover {
+            background-color: rgba(0, 0, 0, 0.1);
+        }
+
+        .questionBox .questionContainer .optionContainer .option:active {
+            -webkit-transform: scaleX(0.9);
+            transform: scaleX(0.9);
+        }
+
+        .questionBox .questionContainer .questionFooter {
+            background: rgba(0, 0, 0, 0.025);
+            border-top: 1px solid rgba(0, 0, 0, 0.1);
+            width: 100%;
+            align-self: flex-end;
+        }
+
+        .questionBox .questionContainer .questionFooter .pagination {
+            margin: 15px 25px;
+        }
+
+        .pagination {
+            display: -webkit-box;
+            display: flex;
+            -webkit-box-pack: justify;
+            justify-content: space-between;
+        }
+
+        .button {
+            padding: 0.5rem 1rem;
+            border: 1px solid rgba(0, 0, 0, 0.25);
+            border-radius: 5rem;
+            margin: 0 0.25rem;
+            -webkit-transition: 0.3s;
+            transition: 0.3s;
+        }
+
+        .button:hover {
+            cursor: pointer;
+            background: #ECEFF1;
+            border-color: rgba(0, 0, 0, 0.25);
+        }
+
+        .button.is-active {
+            background: #3D5AFE;
+            color: white;
+            border-color: transparent;
+        }
+
+        .button.is-active:hover {
+            background: #0a2ffe;
+        }
+
+        .image-cropper-round {
+            display: inline-block;
+            width: 200px;
+            height: 200px;
+            position: relative;
+            border-radius: 50%;
+            margin: auto;
+        }
+
+        .image-cropper-rect {
+            width: 200px;
+            height: 200px;
+            overflow: hidden;
+            border-radius: 50%;
+            margin: auto;
+            text-align: center;
+        }
+
+        .profile-pic {
+            display: inline-block;
+            margin: 0 auto;
+            position: relative;
+            height: 100%;
+            width: auto;
+            left: 100%;
+            margin-left: -200%;
+        }
+
+        @media screen and (min-width: 769px) {
+            .questionBox {
+                -webkit-box-align: center;
+                align-items: center;
+                -webkit-box-pack: center;
+                justify-content: center;
+            }
+
+            .questionBox .questionContainer {
+                display: -webkit-box;
+                display: flex;
+                -webkit-box-orient: vertical;
+                -webkit-box-direction: normal;
+                flex-direction: column;
+            }
+        }
+
+        @media screen and (max-width: 768px) {
+            .sidebar {
+                height: auto !important;
+                border-radius: 6px 6px 0px 0px;
+            }
+        }
+    </style>
+</body>
+
+</html>
